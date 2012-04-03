@@ -40,3 +40,25 @@ assertDiffPatch({
   b: {__id__: '#1'},
   c: {__id__: '#2'}
 }, b)
+
+
+assertDiffPatch([
+  {__id__: '#0'},
+  {__id__: '#1'},
+  {__id__: '#2'}
+], [
+  {__id__: '#1'},
+  {__id__: '#2'},
+  {__id__: '#0'}
+])
+
+
+assertDiffPatch({
+  b:'x',
+  a: {__id__: 'AoA'}
+},{
+  a: {__id__: 'aaa'},
+  b:'x'
+})
+
+

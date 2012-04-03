@@ -1,5 +1,28 @@
 
-var adiff = require('adiff')
+//inject a matchRef, isRef, and a getRef function?
+//could use the same pattern with objects.
+
+//I don't really want to force __id__
+//should be able to use anything, aslong as you 
+
+var adiff = require('adiff')({
+  equal: function (a, b) {
+    function _equal(a, b) {
+      if(isObject(a) && isObject(b) && a.__id__ === b.__id__)
+        return true
+      if(a && !b) return false
+      if(Array.isArray(a))
+        if(a.length != b.length) return false
+
+      if(a && 'object' == typeof a) {
+        for(var i in a)
+          if(!_equal(a[i], b[i])) return false
+        return true
+      }
+      return a == b
+    }
+  }
+})
 
 function getPath (obj, path) {
   if(!Array.isArray(path))
@@ -63,19 +86,18 @@ exports.diff = function (a, b) {
       return delta
     }
 
-//    if(isObject(a) && isObject(b) && a.__id__ && b.__id__ && a.__id__ === b.__id__)
-//      return []
-
     for (var k in b) {
-   
       if(isObject(b[k]) && isObject(a[k])) { 
-        if(b[k].__id__ && b[k].__id__ === a[k].__id__)
-          ;
-        else if(b[k].__id__ && b[k].__id__ !== a[k].__id__)
-          delta.push(['sref', k, b[k].__id__])
-        else
+        if(b[k].__id__) {
+          if(b[k].__id__ !== a[k].__id__) {
+            if(aRefs[b[k].__id__])
+              delta.push(['sref', k, b[k].__id__])
+            else
+              delta.push(['set', k, b[k]])
+          }
+        } else
           delta.push(['apl', k, _diff(a[k], b[k])])
-      } else if(isObject(b[k]) && b[k].__id__) {
+      } else if(isObject(b[k]) && b[k].__id__ && aRefs[b[k].__id__]) {
         if(!a[k] || b[k].__id__ !== a[k].__id__)
           delta.push(['sref', k, b[k].__id__])
       } else if(b[k] !== a[k]) {
@@ -87,7 +109,6 @@ exports.diff = function (a, b) {
       if('undefined' == typeof b[k])
         delta.push(['del', k])
     }
-
     return delta
   }
 }
