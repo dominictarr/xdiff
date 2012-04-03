@@ -1,0 +1,16 @@
+{
+  "author": "Dominic Tarr <dominic.tarr@gmail.com> (dominictarr.com)",
+  "name": "xdiff",
+  "description": "calc diffs of complex javascript objects.",
+  "version": "0.0.0",
+  "homepage": "http://github.com/dominictarr/xdiff",
+  "repository": {
+    "url": ""
+  },
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "optionalDependencies": {}
+}
