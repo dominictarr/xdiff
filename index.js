@@ -52,6 +52,14 @@ function isObject (o) {
   return o && 'object' == typeof o
 }
 
+function isRef(x) {
+  return x ? x.__id__ : undefined
+}
+
+function sameRef(a, b) {
+  return a && b && isRef(a) === isRef(b)
+}
+
 exports.diff = function (a, b) {
 
   var aRefs = findRefs(a)
@@ -87,22 +95,15 @@ exports.diff = function (a, b) {
     }
 
     for (var k in b) {
-      if(isObject(b[k]) && isObject(a[k])) { 
-        if(b[k].__id__) {
-          if(b[k].__id__ !== a[k].__id__) {
-            if(aRefs[b[k].__id__])
-              delta.push(['sref', k, b[k].__id__])
-            else
-              delta.push(['set', k, b[k]])
-          }
-        } else
-          delta.push(['apl', k, _diff(a[k], b[k])])
-      } else if(isObject(b[k]) && b[k].__id__ && aRefs[b[k].__id__]) {
-        if(!a[k] || b[k].__id__ !== a[k].__id__)
-          delta.push(['sref', k, b[k].__id__])
-      } else if(b[k] !== a[k]) {
-        delta.push(['set', k, b[k]])
-      }
+     if(!b[k] || 'object' !== typeof b[k] || !aRefs[isRef(b[k])]) {
+        if(b[k] !== a[k])
+          delta.push(['set', k, b[k]])
+    //  else if (sameRef(a[k], b[k]))
+      //  ; //do nothing
+      } else if (aRefs[isRef(b[k])] && !sameRef(a[k], b[k]))
+        delta.push(['sref', k, isRef(b[k])]) //ref has changed, set it
+      else
+        delta.push(['apl', k, _diff(a[k], b[k])])
     }
     
     for (var k in a) {
