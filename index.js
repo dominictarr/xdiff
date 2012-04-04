@@ -94,22 +94,22 @@ exports.diff = function (a, b) {
       return delta
     }
 
+    //what about when a setRef is inside a array?
+    //clearly, adiff will need to look after that.
+
     for (var k in b) {
      if(!b[k] || 'object' !== typeof b[k] || !aRefs[isRef(b[k])]) {
         if(b[k] !== a[k])
           delta.push(['set', k, b[k]])
-    //  else if (sameRef(a[k], b[k]))
-      //  ; //do nothing
       } else if (aRefs[isRef(b[k])] && !sameRef(a[k], b[k]))
         delta.push(['sref', k, isRef(b[k])]) //ref has changed, set it
       else
         delta.push(['apl', k, _diff(a[k], b[k])])
     }
     
-    for (var k in a) {
+    for (var k in a)
       if('undefined' == typeof b[k])
         delta.push(['del', k])
-    }
     return delta
   }
 }
@@ -117,7 +117,6 @@ exports.diff = function (a, b) {
 exports.patch = function (a, patch) {
 
   var root = patch.root
-  console.log('ROOT', root)
   delete patch.root
 
   var refs = findRefs(a)
