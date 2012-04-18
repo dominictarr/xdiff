@@ -80,28 +80,9 @@ exports.diff = function (a, b) {
   // how to handle references?
   // this is necessary to handle objects in arrays nicely
   // otherwise mergeing an edit and a move is ambigous.  // will need to perform a topoligical sort of the refs and diff them first, in that order.
-
   // first, apply changes to all refs,
   // then traverse over the root object,
 
-/*  var rDelta = {}
-
-  for(var k in aRefs) {
-    if(bRefs[k]) {
-      var d = _diff(aRefs[k], bRefs[k])
-      if(d.length)
-        rDelta[k] = d
-    }
-  }
-
-  rDelta.root = _diff(a, b)
-
-  return rDelta
-*/
-
-  var delta = []
-  _diff(aRefs, bRefs, [])
-  return delta
   function _diff (a, b, path) {
     path = path || []
 
@@ -130,23 +111,30 @@ exports.diff = function (a, b) {
    var isRoot = !path.length
 
     for (var k in b) {
-      if(!shallowEqual(b[k], a[k]) || !aRefs[b[k]] && !isRoot)
-        delta.push(['set', path.concat(k), aRefs[isRef(b[k])] ? toRef(b[k]) : b[k]])
-      else if(isObject(b[k])) 
+// if both are nonRef objects, or are the same object, branch into them.
+      if(isObject(a[k]) && isObject(b[k]) && isRef(b[k]) === isRef(a[k])) 
         _diff(a[k], b[k], path.concat(k))
-//       delta.push(['apl', path.concat(k), _diff(a[k], b[k])])  
+      else if(!shallowEqual(b[k], a[k]) || !aRefs[isRef(b[k])] && !isRoot)
+        delta.push(['set', path.concat(k), aRefs[isRef(b[k])] ? toRef(b[k]) : b[k]])
+      //else if(isObject(b[k])) 
+        //_diff(a[k], b[k], path.concat(k))
     }
     
     for (var k in a)
       if('undefined' == typeof b[k])
         delta.push(['del', path.concat(k)])
   }
+
+  var delta = []
+  _diff(aRefs, bRefs, [])
+
+  return delta
+
 }
 
 exports.patch = function (a, patch) {
 
-//  var root = patch.root
-//  delete patch.root
+  if(!patch) throw new Error('expected patch')
 
   var refs = findRefs(a)
   refs.root = a
@@ -178,36 +166,8 @@ exports.patch = function (a, patch) {
     }
   }
 
-/*
-  function _patch(a, patch) {
-
-    patch.forEach(function (args) {
-      var method = args.shift()
-      var obj = a 
-      methods[method].apply(obj, args)
-    })
-
-    return a
-
-  }
-*/
-/*  for(var k in patch) {
-    _patch(refs[k], patch[k])
-  }
-
-  return _patch(a, root)
- */
   function pathTo(a, p) {
-    console.log(a , p)
-    //while (p.length)
-    //  a = a[p.shift()]
-    //return a
-      
-
-
-    for (var i in p) {
-      a = a[p[i]]
-    }
+    for (var i in p) a = a[p[i]]
     return a
   }
 
@@ -219,7 +179,6 @@ exports.patch = function (a, patch) {
       key = path.pop()
       args.unshift(key)
     }
-    console.log(method, path, obj, args)
     var obj = pathTo(refs, path)
     methods[method].apply(obj, args)
   })
@@ -227,6 +186,104 @@ exports.patch = function (a, patch) {
   return refs.root
 }
 
-exports.diff3 = function () {
+exports.diff3 = function (a, o, b) {
 
+  //get the two diffs
+
+  var _a = exports.diff(o, a)
+    , _b = exports.diff(o, b) 
+
+  //then merge them.
+  //for each change in a, see if there is a conflicting change in b
+
+  //i.e. a set or delete on the prefix to a path.
+  //sort the changes by path, and then method...
+
+  var p = []
+
+  function add(_p) {p.push(_p)}
+
+  _a.forEach(add)
+  _b.forEach(add)
+
+  // for each change in _a
+
+  function cmp (a, b) {
+    //check if a[1] > b[1]
+    if(!b)
+      return 1
+
+    var p = a[1], q = b[1]
+    var i = 0
+    while (p[i] === q[i] && p[i] != null)
+      i++
+
+    if(p[i] === q[i]) return 0
+    return p[i] < q[i] ? -1 : 1
+  }
+
+  function isPrefix(a, b) {
+    if(!b) return 1
+    var p = a[1], q = b[1]
+    var i = 0
+    while (p[i] === q[i] && i < p.length && i < q.length)
+      i++
+    if(i == p.length || i == q.length) return 0
+    return p[i] < q[i] ? -1 : 1 
+  }
+
+  //merge two lists, which must be sorted.
+
+  function cmpSp (a, b) {
+    if(a[0] == b[0])
+      return 0
+    function max(k) {
+      return k[0] + (k[1] >= 1 ? k[1] - 1 : 0)
+    }
+    if(max(a) < b[0] || max(b) < a[0])
+      return a[0] - b[0]
+    return 0
+  }
+
+  function resolveAry(a, b) {
+    return a
+  }
+
+  function resolve(a, b) {
+    console.log('resolve', a,'---', b)
+    if(a[1].length == b[1].length) { 
+      if(a[0] == b[0]) {
+        if(a[0] == 'splice') {
+          var R = merge(a[2], b[2], cmpSp, resolveAry)
+          return ['splice', a[1].slice(), R]
+        } else if(equal(a[2], b[2])) //same change both sides.
+          return a
+      }
+    }
+    return a
+  }
+
+  function merge(a, b, cmp, resolve) {
+    var i = a.length - 1, j = b.length - 1, r = []
+    while(~i && ~j) {
+      var c = cmp(a[i], b[j])
+      if(c > 0) r.push(a[i--])
+      if(c < 0) r.push(b[j--])
+      if(!c) {
+        var R = resolve(a[i], b[j])
+          j--, i--
+        r.push(R)
+      }
+      console.log(r)
+    }
+    //finish off the list if there are any left over
+    while(~i) r.push(a[i--])
+    while(~j) r.push(b[j--])
+    return r
+  }
+
+  _a.sort(cmp)
+  _b.sort(cmp)
+
+  return merge(_a, _b, isPrefix, resolve)
 }
