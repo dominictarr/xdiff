@@ -5,24 +5,33 @@
 //I don't really want to force __id__
 //should be able to use anything, aslong as you 
 
-var adiff = require('adiff')({
-  equal: function (a, b) {
-    function _equal(a, b) {
-      if(isObject(a) && isObject(b) && a.__id__ === b.__id__)
-        return true
-      if(a && !b) return false
-      if(Array.isArray(a))
-        if(a.length != b.length) return false
 
-      if(a && 'object' == typeof a) {
-        for(var i in a)
-          if(!_equal(a[i], b[i])) return false
-        return true
-      }
-      return a == b
-    }
+function shallowEqual (a, b) {
+    if(isObject(a) 
+      && isObject(b) 
+      && (a.__id__ === b.__id__ || a === b))
+      return true
+    if(a && !b) return false
+    return a == b
   }
-})
+
+
+function equal (a, b) {
+  if(isObject(a) && isObject(b) && (a.__id__ === b.__id__ || a === b))
+    return true
+  if(a && !b) return false
+  if(Array.isArray(a))
+    if(a.length != b.length) return false
+
+  if(a && 'object' == typeof a) {
+    for(var i in a)
+      if(!equal(a[i], b[i])) return false
+    return true
+  }
+  return a == b
+}
+
+var adiff = require('adiff')({ equal: equal })
 
 function getPath (obj, path) {
   if(!Array.isArray(path))
@@ -89,21 +98,30 @@ exports.diff = function (a, b) {
   function _diff (a, b) {
     var delta = []
 
+    function toRef(v) {
+      //TODO escape strings that happen to start with #*=
+      var r
+      if(r = isRef(v)) return '#*='+r
+      return v
+    }
+
     if(Array.isArray(a) && Array.isArray(b)) {
-      delta.push(['splice', adiff.diff(a, b)])
+      delta.push(['splice', adiff.diff(a.map(toRef), b.map(toRef))])
       return delta
     }
 
-    //what about when a setRef is inside a array?
-    //clearly, adiff will need to look after that.
+// references to objects with ids are
+// changed into strings of thier id.
+// the string is prepended with '#*='
+// to distinguish it from other strings
+// if you use that string in your model,
+// it will break.
+// TODO escape strings so this is safe
 
     for (var k in b) {
-     if(!b[k] || 'object' !== typeof b[k] || !aRefs[isRef(b[k])]) {
-        if(b[k] !== a[k])
-          delta.push(['set', k, b[k]])
-      } else if (aRefs[isRef(b[k])] && !sameRef(a[k], b[k]))
-        delta.push(['sref', k, isRef(b[k])]) //ref has changed, set it
-      else
+      if(!shallowEqual(b[k], a[k]) || !aRefs[b[k]])
+        delta.push(['set', k, aRefs[isRef(b[k])] ? toRef(b[k]) : b[k]])
+      else if(isObject(b[k])) 
         delta.push(['apl', k, _diff(a[k], b[k])])
     }
     
@@ -120,9 +138,16 @@ exports.patch = function (a, patch) {
   delete patch.root
 
   var refs = findRefs(a)
+ 
+  function fromRef(v) {
+    //TODO escape strings that happen to start with #*=
+    if(/^#\*=/.test(v)) return refs[v.substring(3)]
+      return v
+  }
+
   var methods = {
     set: function (key, value) {
-      this[key] = value
+      this[key] = fromRef(value) // incase this was a reference, remove it.
     },
     del: function (key) {
       delete this[key]
@@ -132,6 +157,9 @@ exports.patch = function (a, patch) {
     },
     splice: function (changes) {
       adiff.patch(this, changes, true)
+      this.forEach(function (v, k, self) {
+        self[k] = fromRef(v)
+      })
     },
     sref: function (key, id) {
       this[key] = refs[id] 
@@ -142,9 +170,8 @@ exports.patch = function (a, patch) {
   function _patch(a, patch) {
 
     patch.forEach(function (args) {
-    console.log('ARGS', args)
       var method = args.shift()
-    var obj = a 
+      var obj = a 
       methods[method].apply(obj, args)
     })
 

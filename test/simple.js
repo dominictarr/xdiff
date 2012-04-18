@@ -5,8 +5,11 @@ var x = require('../')
 function assertDiffPatch(m, n) {
 
   var delta = x.diff(m, n)
-  console.log('delta', JSON.stringify(delta))
+  console.log('-------')
+  console.log('orig    :', JSON.stringify(m))
+  console.log('delta   :', JSON.stringify(delta))
   var patched = x.patch(m, delta)
+  console.log('patched :', JSON.stringify(patched))
   a.deepEqual(patched, n)
 
 }
