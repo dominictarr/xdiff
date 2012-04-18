@@ -74,6 +74,9 @@ exports.diff = function (a, b) {
   var aRefs = findRefs(a)
   var bRefs = findRefs(b)
 
+  aRefs.root = a
+  bRefs.root = b
+
   // how to handle references?
   // this is necessary to handle objects in arrays nicely
   // otherwise mergeing an edit and a move is ambigous.  // will need to perform a topoligical sort of the refs and diff them first, in that order.
@@ -81,7 +84,7 @@ exports.diff = function (a, b) {
   // first, apply changes to all refs,
   // then traverse over the root object,
 
-  var rDelta = {}
+/*  var rDelta = {}
 
   for(var k in aRefs) {
     if(bRefs[k]) {
@@ -94,9 +97,13 @@ exports.diff = function (a, b) {
   rDelta.root = _diff(a, b)
 
   return rDelta
+*/
 
-  function _diff (a, b) {
-    var delta = []
+  var delta = []
+  _diff(aRefs, bRefs, [])
+  return delta
+  function _diff (a, b, path) {
+    path = path || []
 
     function toRef(v) {
       //TODO escape strings that happen to start with #*=
@@ -106,7 +113,7 @@ exports.diff = function (a, b) {
     }
 
     if(Array.isArray(a) && Array.isArray(b)) {
-      delta.push(['splice', adiff.diff(a.map(toRef), b.map(toRef))])
+      delta.push(['splice', path, adiff.diff(a.map(toRef), b.map(toRef))])
       return delta
     }
 
@@ -118,26 +125,31 @@ exports.diff = function (a, b) {
 // it will break.
 // TODO escape strings so this is safe
 
+   //ah, treat root like it's a __id__
+
+   var isRoot = !path.length
+
     for (var k in b) {
-      if(!shallowEqual(b[k], a[k]) || !aRefs[b[k]])
-        delta.push(['set', k, aRefs[isRef(b[k])] ? toRef(b[k]) : b[k]])
+      if(!shallowEqual(b[k], a[k]) || !aRefs[b[k]] && !isRoot)
+        delta.push(['set', path.concat(k), aRefs[isRef(b[k])] ? toRef(b[k]) : b[k]])
       else if(isObject(b[k])) 
-        delta.push(['apl', k, _diff(a[k], b[k])])
+        _diff(a[k], b[k], path.concat(k))
+//       delta.push(['apl', path.concat(k), _diff(a[k], b[k])])  
     }
     
     for (var k in a)
       if('undefined' == typeof b[k])
-        delta.push(['del', k])
-    return delta
+        delta.push(['del', path.concat(k)])
   }
 }
 
 exports.patch = function (a, patch) {
 
-  var root = patch.root
-  delete patch.root
+//  var root = patch.root
+//  delete patch.root
 
   var refs = findRefs(a)
+  refs.root = a
  
   function fromRef(v) {
     //TODO escape strings that happen to start with #*=
@@ -166,7 +178,7 @@ exports.patch = function (a, patch) {
     }
   }
 
-
+/*
   function _patch(a, patch) {
 
     patch.forEach(function (args) {
@@ -178,13 +190,41 @@ exports.patch = function (a, patch) {
     return a
 
   }
-
-  for(var k in patch) {
+*/
+/*  for(var k in patch) {
     _patch(refs[k], patch[k])
   }
 
   return _patch(a, root)
- 
+ */
+  function pathTo(a, p) {
+    console.log(a , p)
+    //while (p.length)
+    //  a = a[p.shift()]
+    //return a
+      
+
+
+    for (var i in p) {
+      a = a[p[i]]
+    }
+    return a
+  }
+
+  patch.forEach(function (args) {
+    var method = args.shift()
+    var path = args.shift()
+    var key
+    if(method != 'splice') {
+      key = path.pop()
+      args.unshift(key)
+    }
+    console.log(method, path, obj, args)
+    var obj = pathTo(refs, path)
+    methods[method].apply(obj, args)
+  })
+
+  return refs.root
 }
 
 exports.diff3 = function () {

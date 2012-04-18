@@ -6,7 +6,8 @@ function assertDiffPatch(m, n) {
 
   var delta = x.diff(m, n)
   console.log('-------')
-  console.log('orig    :', JSON.stringify(m))
+  console.log('A       :', JSON.stringify(m))
+  console.log('B       :', JSON.stringify(n))
   console.log('delta   :', JSON.stringify(delta))
   var patched = x.patch(m, delta)
   console.log('patched :', JSON.stringify(patched))
