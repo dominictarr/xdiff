@@ -10,7 +10,9 @@
   "engines": {
     "node": "*"
   },
-  "dependencies": {},
+  "dependencies": {
+    "adiff": "0.2"
+  },
   "devDependencies": {},
   "optionalDependencies": {}
 }
