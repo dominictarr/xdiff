@@ -30,6 +30,8 @@ you need to also to pass the [concestor](http://en.wikipedia.org/wiki/Concestor)
 
 also see [adiff](https://github.com/dominictarr/adiff] which xdiff depends on to diff arrays.
 
+xdiff is compatible with [snob](https://github.com/dominictarr/snob)
+
 ### Objects
 
 ``` js
