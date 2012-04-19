@@ -1,6 +1,6 @@
 # xdiff
 
-`diff` and `patch` (nearly) arbitary json documents.
+`diff`, `diff3`, `patch` (nearly) arbitary json documents.
 
 ## examples
 
@@ -20,10 +20,15 @@ require('assert').deepEqual(a, patched)
 
 ```
 
-## diff
+## diff, patch, diff3
 
-with `diff` you can create a diff that is appliable with `patch`
+with `diff` you can create a diff that is applyable with `patch`
 you can diff nested objects, and arrays.
+
+with `diff3` you create a diff from two objects that have been edited concurrently, 
+you need to also to pass the [concestor](http://en.wikipedia.org/wiki/Concestor).
+
+also see [adiff](https://github.com/dominictarr/adiff] which xdiff depends on to diff arrays.
 
 ### Objects
 
@@ -109,5 +114,4 @@ three way merge takes 3 objects, `mine`, `yours` and an `old` object, which must
 if there are concurrent changes, xdiff will choose to use the change from `mine`
 
 in a future version, xdiff will support injectable resolve function, so that you can choose how to rosolve the merge.
-
 
