@@ -47,11 +47,14 @@ function findRefs(obj, refs) {
   //add leaves before branches.
   //this will FAIL if there are circular references.
 
+  if(!obj)
+    return refs
+
   for(var k in obj) {
     if(obj[k] && 'object' == typeof obj[k])
       findRefs(obj[k], refs)
   }
-
+  
   if(obj.__id__ && !refs[obj.__id__])
     refs[obj.__id__] = obj
   return refs
@@ -94,7 +97,9 @@ exports.diff = function (a, b) {
     }
 
     if(Array.isArray(a) && Array.isArray(b)) {
-      delta.push(['splice', path, adiff.diff(a.map(toRef), b.map(toRef))])
+      var d = adiff.diff(a.map(toRef), b.map(toRef))
+      if(d.length)
+        delta.push(['splice', path, d])
       return delta
     }
 
@@ -115,7 +120,7 @@ exports.diff = function (a, b) {
       if(isObject(a[k]) && isObject(b[k]) && isRef(b[k]) === isRef(a[k])) 
         _diff(a[k], b[k], path.concat(k))
       else if(!shallowEqual(b[k], a[k]) || !aRefs[isRef(b[k])] && !isRoot)
-        delta.push(['set', path.concat(k), aRefs[isRef(b[k])] ? toRef(b[k]) : b[k]])
+        delta.push(['set', path.concat(k), aRefs[isRef(b[k])] ? toRef(b[k]) : cpy(b[k])])
       //else if(isObject(b[k])) 
         //_diff(a[k], b[k], path.concat(k))
     }
@@ -128,7 +133,8 @@ exports.diff = function (a, b) {
   var delta = []
   _diff(aRefs, bRefs, [])
 
-  return delta
+  if(delta.length)
+    return delta
 
 }
 
@@ -136,13 +142,14 @@ exports.patch = function (a, patch) {
 
   if(!patch) throw new Error('expected patch')
 
+  a = cpy(a)
   var refs = findRefs(a)
   refs.root = a
  
   function fromRef(v) {
     //TODO escape strings that happen to start with #*=
     if(/^#\*=/.test(v)) return refs[v.substring(3)]
-      return v
+      return cpy(v)
   }
 
   var methods = {
@@ -172,8 +179,9 @@ exports.patch = function (a, patch) {
   }
 
   patch.forEach(function (args) {
+    args = args.slice()
     var method = args.shift()
-    var path = args.shift()
+    var path = args.shift().slice()
     var key
     if(method != 'splice') {
       key = path.pop()
@@ -186,10 +194,13 @@ exports.patch = function (a, patch) {
   return refs.root
 }
 
+function cpy(o) {
+  return JSON.parse(JSON.stringify(o))
+}
+
 exports.diff3 = function (a, o, b) {
-
-  //get the two diffs
-
+  if(arguments.length == 1)
+    o = a[1], b = a[2], a = a[0]
   var _a = exports.diff(o, a)
     , _b = exports.diff(o, b) 
 
@@ -250,7 +261,6 @@ exports.diff3 = function (a, o, b) {
   }
 
   function resolve(a, b) {
-    console.log('resolve', a,'---', b)
     if(a[1].length == b[1].length) { 
       if(a[0] == b[0]) {
         if(a[0] == 'splice') {
@@ -274,7 +284,6 @@ exports.diff3 = function (a, o, b) {
           j--, i--
         r.push(R)
       }
-      console.log(r)
     }
     //finish off the list if there are any left over
     while(~i) r.push(a[i--])
