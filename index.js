@@ -19,16 +19,17 @@ function shallowEqual (a, b) {
 function equal (a, b) {
   if(isObject(a) && isObject(b) && (a.__id__ == b.__id__ || a === b))
     return true
-  if(a && !b) return false
+  if((a && !b) || (!a && b)) return false
   if(Array.isArray(a))
     if(a.length != b.length) return false
 
-  if(a && 'object' == typeof a) {
+  if(a && 'object' == typeof a && 'object' == typeof b) {
+    console.log('object')
     for(var i in a)
       if(!equal(a[i], b[i])) return false
     return true
   }
-  return a == b
+  return a === b
 }
 
 var adiff = require('adiff')({ equal: equal })
@@ -164,7 +165,9 @@ exports.diff = function (a, b) {
     path = path || []
 
     if(Array.isArray(a) && Array.isArray(b)) {
+      console.log('DIFF', a, b)
       var d = adiff.diff(a, b)
+      console.log('DIFFED!!!')
       if(d.length) delta.push(['splice', path, d])
       return delta
     }

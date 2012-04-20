@@ -78,6 +78,15 @@ assertDiff(
   [ [SET, [ROOT, 'hello'], [asRef('123')]]]
 )
 
+assertDiff(
+  {hello: [thing, 0]},
+  {hello: [[ thing], 0]},
+  [ [SPL, [ROOT, 'hello'], [[0, 1, [asRef('123')]]]]]
+)
+
+
+
+
 log('passed')
 
 
