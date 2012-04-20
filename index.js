@@ -94,8 +94,6 @@ exports.deref = function (o, mutate) {
     var p = mutate ? o : Array.isArray(o) ? [] : {} //will copy the tree!
     for (var k in o) {
       var r 
-      //console.log(o, k)
-
       if(isRef(o[k])) p[k] = toRef(o[k])
       else if(isObject(o[k])) p[k] = deref(o[k])
       else p[k] = o[k]
@@ -104,7 +102,6 @@ exports.deref = function (o, mutate) {
   }
   
   refs.root = o
-  //console.log('REFS',refs)  
   for (var k in refs)
     refs[k] = deref(refs[k], k)
   return refs
@@ -140,16 +137,13 @@ exports.reref = function (refs, mutate) {
 
 exports.diff = function (a, b) {
 
-  var aRefs = findRefs(a)
-  var bRefs = findRefs(b)
+  var aRefs = exports.deref(a)
+  var bRefs = exports.deref(b)
 
   var seen = []
 
   for (var k in aRefs)
     seen.push(k)
-
-  aRefs.root = a
-  bRefs.root = b
 
  function isSeen(o) {
     if(isRef(o)) return ~seen.indexOf(o.__id__)
@@ -171,9 +165,8 @@ exports.diff = function (a, b) {
     path = path || []
 
     if(Array.isArray(a) && Array.isArray(b)) {
-      var d = adiff.diff(a.map(toRef), b.map(toRef))
-      if(d.length)
-        delta.push(['splice', path, d])
+      var d = adiff.diff(a, b)
+      if(d.length) delta.push(['splice', path, d])
       return delta
     }
 
@@ -187,20 +180,16 @@ exports.diff = function (a, b) {
 
    //ah, treat root like it's a __id__
 
-   var isRoot = !path.length
+   var isRoot = path.length === 1 && path[0] === 'root'
 
     for (var k in b) {
       // if both are nonRef objects, or are the same object, branch into them.
-      if(isObject(a[k]) && isObject(b[k]) && sameRef(b[k], a[k])){ 
-        _diff(a[k], b[k], path.concat(k))
-}      else if(!shallowEqual(b[k], a[k]) || (!isSeen(b[k]) && !isRoot)) {
-
-        delta.push(['set', path.concat(k), 
-          isSeen(b[k]) ? toRef(b[k]) : addSeen(cpy(b[k]))
-        ])
-        // a new reference is created straight away.
-        // need to remember this has happened so can insert it later.
-      }
+    console.log(b[k], a[k])
+    
+    if(isObject(a[k]) && isObject(b[k]) && sameRef(b[k], a[k])) 
+      _diff(a[k], b[k], path.concat(k))
+    else if(b[k] !== a[k])
+      delta.push(['set', path.concat(k), b[k]])
     }
     
     for (var k in a)
@@ -213,7 +202,6 @@ exports.diff = function (a, b) {
 
   if(delta.length)
     return delta
-
 }
 
 exports.patch = function (a, patch) {
@@ -221,12 +209,13 @@ exports.patch = function (a, patch) {
   if(!patch) throw new Error('expected patch')
 
   a = cpy(a)
-  var refs = findRefs(a)
+  var refs = exports.deref(a, true)
   refs.root = a
  
   function fromRef(v) {
     //TODO escape strings that happen to start with #*=
-    if(/^#\*=/.test(v)) return refs[v.substring(3)]
+    console.log('STRUNG', v)
+    if('string' == typeof v && /^#\*=/.test(v)) return refs[v.substring(3)]
       return cpy(v)
   }
 
@@ -269,7 +258,7 @@ exports.patch = function (a, patch) {
     methods[method].apply(obj, args)
   })
 
-  return refs.root
+  return exports.reref(refs, true)
 }
 
 function cpy(o) {
