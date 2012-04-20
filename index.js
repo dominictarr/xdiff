@@ -165,9 +165,7 @@ exports.diff = function (a, b) {
     path = path || []
 
     if(Array.isArray(a) && Array.isArray(b)) {
-      console.log('DIFF', a, b)
       var d = adiff.diff(a, b)
-      console.log('DIFFED!!!')
       if(d.length) delta.push(['splice', path, d])
       return delta
     }
@@ -190,7 +188,7 @@ exports.diff = function (a, b) {
     if(isObject(a[k]) && isObject(b[k]) && sameRef(b[k], a[k])) 
       _diff(a[k], b[k], path.concat(k))
     else if(b[k] !== a[k])
-      delta.push(['set', path.concat(k), b[k]])
+      delta.push(['set', path.concat(k), cpy(b[k])])
     }
     
     for (var k in a)
@@ -202,7 +200,7 @@ exports.diff = function (a, b) {
   _diff(aRefs, bRefs, [])
 
   if(delta.length)
-    return delta
+    return cpy(delta)
 }
 
 exports.patch = function (a, patch) {
@@ -215,19 +213,13 @@ exports.patch = function (a, patch) {
 
   var methods = {
     set: function (key, value) {
-      this[key] = value // incase this was a reference, remove it.
+      this[key] = cpy(value) // incase this was a reference, remove it.
     },
     del: function (key) {
       delete this[key]
     },
-    apl: function (key, changes) {
-      _patch(this[key], changes)
-    },
     splice: function (changes) {
       adiff.patch(this, changes, true)
-    },
-    sref: function (key, id) {
-      this[key] = refs[id] 
     }
   }
 
