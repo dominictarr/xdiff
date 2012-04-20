@@ -209,16 +209,10 @@ exports.patch = function (a, patch) {
   a = cpy(a)
   var refs = exports.deref(a, true)
   refs.root = a
- 
-  function fromRef(v) {
-    //TODO escape strings that happen to start with #*=
-    if('string' == typeof v && /^#\*=/.test(v)) return refs[v.substring(3)]
-      return cpy(v)
-  }
 
   var methods = {
     set: function (key, value) {
-      this[key] = fromRef(value) // incase this was a reference, remove it.
+      this[key] = value // incase this was a reference, remove it.
     },
     del: function (key) {
       delete this[key]
@@ -228,9 +222,6 @@ exports.patch = function (a, patch) {
     },
     splice: function (changes) {
       adiff.patch(this, changes, true)
-      this.forEach(function (v, k, self) {
-        self[k] = fromRef(v)
-      })
     },
     sref: function (key, id) {
       this[key] = refs[id] 
