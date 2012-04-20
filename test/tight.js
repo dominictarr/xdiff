@@ -65,6 +65,18 @@ assertDiff(
   ]
 )
 
+//here we need to traverse the object, and update any references.
+// that means we will also have to traverse the object
+// when we apply the diff.
+// actually, we're already kinda doing this for the array.
+// oh, things might really simplify if I just traverse
+// the whole object, and replace the refs, then diff those.
+
+assertDiff(
+  {hello: thing},
+  {hello: [thing]},
+  [ [SET, [ROOT, 'hello'], [asRef('123')]]]
+)
 
 log('passed')
 
