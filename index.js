@@ -87,7 +87,6 @@ exports.deref = function (o, mutate) {
   var refs = findRefs(o)
   var derefed = {}
   function deref (o, K) {
-    //console.log('deref:', K, o)
     if(isRef(o) && K != isRef(o))
       return toRef(o)
  
@@ -184,7 +183,6 @@ exports.diff = function (a, b) {
 
     for (var k in b) {
       // if both are nonRef objects, or are the same object, branch into them.
-    console.log(b[k], a[k])
     
     if(isObject(a[k]) && isObject(b[k]) && sameRef(b[k], a[k])) 
       _diff(a[k], b[k], path.concat(k))
@@ -214,7 +212,6 @@ exports.patch = function (a, patch) {
  
   function fromRef(v) {
     //TODO escape strings that happen to start with #*=
-    console.log('STRUNG', v)
     if('string' == typeof v && /^#\*=/.test(v)) return refs[v.substring(3)]
       return cpy(v)
   }
