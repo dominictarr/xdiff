@@ -60,6 +60,13 @@ function findRefs(obj, refs) {
   return refs
 }
 
+function toRef(v) {
+  //TODO escape strings that happen to start with #*=
+  var r
+  if(r = isRef(v)) return '#*='+r
+  return v
+}
+
 function isObject (o) {
   return o && 'object' == typeof o
 }
@@ -70,6 +77,65 @@ function isRef(x) {
 
 function sameRef(a, b) {
   return a && b && isRef(a) == isRef(b)
+}
+
+//traverse o, and replace every object with __id__ with a pointer.
+//make diffing references easy.
+
+
+exports.deref = function (o, mutate) {
+  var refs = findRefs(o)
+  var derefed = {}
+  function deref (o, K) {
+    //console.log('deref:', K, o)
+    if(isRef(o) && K != isRef(o))
+      return toRef(o)
+ 
+    var p = mutate ? o : Array.isArray(o) ? [] : {} //will copy the tree!
+    for (var k in o) {
+      var r 
+      //console.log(o, k)
+
+      if(isRef(o[k])) p[k] = toRef(o[k])
+      else if(isObject(o[k])) p[k] = deref(o[k])
+      else p[k] = o[k]
+    }
+    return p
+  }
+  
+  refs.root = o
+  //console.log('REFS',refs)  
+  for (var k in refs)
+    refs[k] = deref(refs[k], k)
+  return refs
+}
+
+exports.reref = function (refs, mutate) {
+
+  function fromRef(v) {
+    //TODO escape strings that happen to start with #*=
+    if('string' == typeof v && /^#\*=/.test(v)) return refs[v.substring(3)]
+      return v
+  }
+
+  function reref (o) { //will MUTATE the tree
+    if(!isObject(o))
+      return fromRef(o)
+
+    var p = mutate ? o : Array.isArray(o) ? [] : {} //will copy the tree!
+    for (var k in o) {
+      if(isObject(o[k]))
+         p[k] = reref(o[k])
+      else
+        p[k] = fromRef(o[k])
+    }
+    return p
+  }
+  //if the root is a ref. need a special case
+  for (var k in refs) {
+    refs[k] = reref(refs[k])
+  }
+  return refs.root
 }
 
 exports.diff = function (a, b) {
@@ -84,13 +150,6 @@ exports.diff = function (a, b) {
 
   aRefs.root = a
   bRefs.root = b
-
-  function toRef(v) {
-    //TODO escape strings that happen to start with #*=
-    var r
-    if(r = isRef(v)) return '#*='+r
-    return v
-  }
 
  function isSeen(o) {
     if(isRef(o)) return ~seen.indexOf(o.__id__)
@@ -222,21 +281,6 @@ exports.diff3 = function (a, o, b) {
     o = a[1], b = a[2], a = a[0]
   var _a = exports.diff(o, a)
     , _b = exports.diff(o, b) 
-
-  //then merge them.
-  //for each change in a, see if there is a conflicting change in b
-
-  //i.e. a set or delete on the prefix to a path.
-  //sort the changes by path, and then method...
-
-  var p = []
-
-  function add(_p) {p.push(_p)}
-
-  _a.forEach(add)
-  _b.forEach(add)
-
-  // for each change in _a
 
   function cmp (a, b) {
     //check if a[1] > b[1]
