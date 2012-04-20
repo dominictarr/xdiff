@@ -64,5 +64,15 @@ assertDiffPatch({
   a: {__id__: 'aaa'},
   b:'x'
 })
+/*
+FOUND A BUG.
+should not ever change the __id__,
+so a 'set' transaction is not necessary.
 
+if it has set a ref, then it can just use a reference.
+need tight tests.
 
+["UPDATE","hello","master",[{"parent":"66e6dd2fd229c1d53a4cbeb5e99b459ed1b38c35","changes":[["splice",["root","hi"],[[1,1]]]],"depth":5,"timestamp":1334883165695,"id":"6b5466a6d714b49f8ed702d1136da8f8e8927308"}]]
+
+["UPDATE","hello","master",[{"parent":"6b5466a6d714b49f8ed702d1136da8f8e8927308","changes":[["set",["753"],{"__id__":"753"}],["set",["root","thing"],{"__id__":"753"}]],"depth":6,"timestamp":1334883206145,"id":"52d74bfe14fc2bb3ec9cf9fed8f5f006a54abc32"}]]
+*/
