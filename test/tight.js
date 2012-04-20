@@ -78,6 +78,12 @@ assertDiff(
   [ [SET, [ROOT, 'hello'], [asRef('123')]]]
 )
 
+/*
+  I had `a == b` at the end of equal()
+  and equal(['X'], 'X') was evaluating to true
+  and that was confusing adiff, which went into a infinite loop 
+*/
+
 assertDiff(
   {hello: [thing, 0]},
   {hello: [[ thing], 0]},
