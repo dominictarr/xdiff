@@ -9,7 +9,7 @@
 function shallowEqual (a, b) {
     if(isObject(a) 
       && isObject(b) 
-      && (a.__id__ === b.__id__ || a === b))
+      && (a.__id__ == b.__id__ || a === b))
       return true
     if(a && !b) return false
     return a == b
@@ -17,7 +17,7 @@ function shallowEqual (a, b) {
 
 
 function equal (a, b) {
-  if(isObject(a) && isObject(b) && (a.__id__ === b.__id__ || a === b))
+  if(isObject(a) && isObject(b) && (a.__id__ == b.__id__ || a === b))
     return true
   if(a && !b) return false
   if(Array.isArray(a))
@@ -69,7 +69,7 @@ function isRef(x) {
 }
 
 function sameRef(a, b) {
-  return a && b && isRef(a) === isRef(b)
+  return a && b && isRef(a) == isRef(b)
 }
 
 exports.diff = function (a, b) {
@@ -77,8 +77,30 @@ exports.diff = function (a, b) {
   var aRefs = findRefs(a)
   var bRefs = findRefs(b)
 
+  var seen = []
+
+  for (var k in aRefs)
+    seen.push(k)
+
   aRefs.root = a
   bRefs.root = b
+
+  function toRef(v) {
+    //TODO escape strings that happen to start with #*=
+    var r
+    if(r = isRef(v)) return '#*='+r
+    return v
+  }
+
+ function isSeen(o) {
+    if(isRef(o)) return ~seen.indexOf(o.__id__)
+    return true 
+  }
+  function addSeen(o) {
+    if(!isRef(o)) return o
+    if(!isSeen(o)) seen.push(o.__id__)
+    return o
+  }
 
   // how to handle references?
   // this is necessary to handle objects in arrays nicely
@@ -88,13 +110,6 @@ exports.diff = function (a, b) {
 
   function _diff (a, b, path) {
     path = path || []
-
-    function toRef(v) {
-      //TODO escape strings that happen to start with #*=
-      var r
-      if(r = isRef(v)) return '#*='+r
-      return v
-    }
 
     if(Array.isArray(a) && Array.isArray(b)) {
       var d = adiff.diff(a.map(toRef), b.map(toRef))
@@ -116,13 +131,17 @@ exports.diff = function (a, b) {
    var isRoot = !path.length
 
     for (var k in b) {
-// if both are nonRef objects, or are the same object, branch into them.
-      if(isObject(a[k]) && isObject(b[k]) && isRef(b[k]) === isRef(a[k])) 
+      // if both are nonRef objects, or are the same object, branch into them.
+      if(isObject(a[k]) && isObject(b[k]) && sameRef(b[k], a[k])){ 
         _diff(a[k], b[k], path.concat(k))
-      else if(!shallowEqual(b[k], a[k]) || !aRefs[isRef(b[k])] && !isRoot)
-        delta.push(['set', path.concat(k), aRefs[isRef(b[k])] ? toRef(b[k]) : cpy(b[k])])
-      //else if(isObject(b[k])) 
-        //_diff(a[k], b[k], path.concat(k))
+}      else if(!shallowEqual(b[k], a[k]) || (!isSeen(b[k]) && !isRoot)) {
+
+        delta.push(['set', path.concat(k), 
+          isSeen(b[k]) ? toRef(b[k]) : addSeen(cpy(b[k]))
+        ])
+        // a new reference is created straight away.
+        // need to remember this has happened so can insert it later.
+      }
     }
     
     for (var k in a)
