@@ -251,8 +251,8 @@ function cpy(o) {
 exports.diff3 = function (a, o, b) {
   if(arguments.length == 1)
     o = a[1], b = a[2], a = a[0]
-  var _a = exports.diff(o, a)
-    , _b = exports.diff(o, b) 
+  var _a = exports.diff(o, a) || [] // if there where no changes, still merge
+    , _b = exports.diff(o, b) || []
 
   function cmp (a, b) {
     //check if a[1] > b[1]
@@ -329,5 +329,6 @@ exports.diff3 = function (a, o, b) {
   _a.sort(cmp)
   _b.sort(cmp)
 
-  return merge(_a, _b, isPrefix, resolve)
+  var m = merge(_a, _b, isPrefix, resolve)
+  return m.length ? m : null
 }
