@@ -17,18 +17,17 @@ function shallowEqual (a, b) {
 
 
 function equal (a, b) {
-  if(isObject(a) && isObject(b) && (a.__id__ == b.__id__ || a === b))
-    return true
-  if((a && !b) || (!a && b)) return false
+ if((a && !b) || (!a && b)) return false
   if(Array.isArray(a))
     if(a.length != b.length) return false
-
-  if(a && 'object' == typeof a && 'object' == typeof b) {
-    console.log('object')
+  if(isObject(a) && isObject(b)) {
+    if (a.__id__ == b.__id__ || a === b)
+      return true
     for(var i in a)
       if(!equal(a[i], b[i])) return false
     return true
   }
+  if(a == null && b == null) return true
   return a === b
 }
 
@@ -207,7 +206,6 @@ exports.patch = function (a, patch) {
 
   if(!patch) throw new Error('expected patch')
 
-  a = cpy(a)
   var refs = exports.deref(a, true)
   refs.root = a
 
@@ -245,6 +243,7 @@ exports.patch = function (a, patch) {
 }
 
 function cpy(o) {
+  if(!o) return o
   return JSON.parse(JSON.stringify(o))
 }
 
