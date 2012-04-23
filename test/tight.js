@@ -26,8 +26,12 @@ function assertDiff(a, b, d) {
   log('Delta  :', str(diff))
   assert.deepEqual(diff, d)  
   log('ok', ++ t)
-  var patched = x.patch(cpy(a), diff)
-  assert.deepEqual(patched, b)
+  if(!diff)
+    assert.equal(diff, d)
+  else {
+    var patched = x.patch(cpy(a), diff)
+    assert.deepEqual(patched, b)
+  }
 }
 
 assertDiff(
@@ -90,8 +94,34 @@ assertDiff(
   [ [SPL, [ROOT, 'hello'], [[0, 1, [asRef('123')]]]]]
 )
 
+assertDiff(
+  {hello: thing},
+  {hello: [null]},
+  [ [SET, [ROOT, 'hello'], [null]], [DEL, ['123'] ] ]
+)
 
+assertDiff(
+  {hello: [thing]},
+  {hello: [null]},
+  [ [SPL, [ROOT, 'hello'], [[0, 1 , null]]], [DEL, ['123'] ] ]
+)
 
+assertDiff(
+  {hello: thing, },
+  {hello: [null]},
+  [ [SET, [ROOT, 'hello'], [null]], [DEL, ['123'] ] ]
+)
+
+/*
+  null and undefined should be compared with == because JSON.parse(JSON.stringify(undefined)) === null
+
+*/
+
+assertDiff(
+  [null],
+  [undefined],
+  undefined 
+)
 
 log('passed')
 
