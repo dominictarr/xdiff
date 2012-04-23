@@ -11,7 +11,7 @@
     "node": "*"
   },
   "dependencies": {
-    "adiff": "0.2"
+    "adiff": "~0.2.4"
   },
   "devDependencies": {},
   "optionalDependencies": {}
