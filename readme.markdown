@@ -117,3 +117,6 @@ if there are concurrent changes, xdiff will choose to use the change from `mine`
 
 in a future version, xdiff will support injectable resolve function, so that you can choose how to rosolve the merge.
 
+## licence
+
+MIT / Apache2
