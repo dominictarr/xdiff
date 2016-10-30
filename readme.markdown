@@ -28,7 +28,7 @@ you can diff nested objects, and arrays.
 with `diff3` you create a diff from two objects that have been edited concurrently, 
 you need to also to pass the [concestor](http://en.wikipedia.org/wiki/Concestor).
 
-also see [adiff](https://github.com/dominictarr/adiff] which xdiff depends on to diff arrays.
+also see [adiff](https://github.com/dominictarr/adiff) which xdiff depends on to diff arrays.
 
 xdiff is compatible with [snob](https://github.com/dominictarr/snob)
 
